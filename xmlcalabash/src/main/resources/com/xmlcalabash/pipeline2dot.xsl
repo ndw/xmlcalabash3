@@ -375,11 +375,17 @@
                 from="cluster_{generate-id($from_step)}_head" output="{generate-id($from_port)}_head_output"/>
     </xsl:when>
     <xsl:otherwise>
+      <xsl:variable name="from_id_suffix" as="xs:string?">
+        <xsl:if test="$from_step/self::ns:compound-step and $from_step = $this/ancestor::*">
+          <xsl:sequence select="'_foot'"/>
+        </xsl:if>
+      </xsl:variable>
 <!--
       <xsl:message>cluster_{generate-id($from_step)}. {generate-id($from_port)} → cluster_{generate-id($to_step)}_head . {generate-id($to_port)}_head_input</xsl:message>
 -->
       <dot:edge x="7" to="cluster_{generate-id($to_step)}_head" input="{generate-id($to_port)}_head_input"
-                from="cluster_{generate-id($from_step)}" output="{generate-id($from_port)}"/>
+                from="cluster_{generate-id($from_step)}{$from_id_suffix}"
+                output="{generate-id($from_port)}{$from_id_suffix}"/>
     </xsl:otherwise>
   </xsl:choose>
 </xsl:template>
