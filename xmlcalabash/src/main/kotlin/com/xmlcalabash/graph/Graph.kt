@@ -81,23 +81,10 @@ class Graph private constructor(val environment: PipelineEnvironment) {
         }
 
         for (model in models.filter { it !== node}) {
-            for ((port, _) in model.outputs) {
-                var unconnected = true
-                for (edge in edges) {
-                    if (edge.from == model && edge.outputPort == port) {
-                        unconnected = false
-                        break
-                    }
-                }
-                if (unconnected) {
-                    pipeline.stepConfig.debug { "Adding p:sink to ${model} output ${port}"}
-                    val step = Sink(model.parent!!.step)
-                    val sink = AtomicModel(this, model.parent, step, modelName(step.name))
-                    sink.init()
-                    sink.inputs["source"] = ModelPort(sink, "source", false, true, true, listOf())
-                    (model.parent as CompoundModel)._children.add(sink)
-                    addEdge(model, port, sink, "source")
-                }
+            checkUnboundOutputs(model)
+            if (model is CompoundModel) {
+                checkUnboundOutputs(model.head)
+                checkUnboundOutputs(model.foot)
             }
         }
 
@@ -106,6 +93,28 @@ class Graph private constructor(val environment: PipelineEnvironment) {
 
         pipelineNode = node
         return node
+    }
+
+    private fun checkUnboundOutputs(model: Model) {
+        for ((port, _) in model.outputs) {
+            var unconnected = true
+            for (edge in edges) {
+                if (edge.from == model && edge.outputPort == port) {
+                    unconnected = false
+                    break
+                }
+            }
+            if (unconnected) {
+                model.step.stepConfig.debug { "Adding p:sink to ${model} output ${port}"}
+                val step = Sink(model.parent!!.step)
+                val sink = AtomicModel(this, model.parent, step, modelName(step.name))
+                sink.init()
+                sink.inputs["source"] = ModelPort(sink, "source", false, true, true, listOf())
+                (model.parent as CompoundModel)._children.add(sink)
+                addEdge(model, port, sink, "source")
+            }
+        }
+
     }
 
     private fun createModels(node: CompoundModel) {
